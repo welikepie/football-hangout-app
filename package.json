@@ -1,0 +1,18 @@
+{
+  "name": "fff_hangout_app",
+  "version": "0.0.1",
+  "app": {
+    "title": "French Football Federation Hangout App",
+    "baseUrl": "https://dev.welikepie.com:444/football-hangout-app/"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.0",
+    "grunt-contrib-clean": "~0.4.0",
+    "grunt-contrib-copy": "~0.4.0",
+    "grunt-contrib-jshint": "~0.2.0",
+    "grunt-contrib-concat": "~0.1.3",
+    "grunt-contrib-uglify": "~0.1.2",
+    "grunt-contrib-watch": "~0.3.1",
+    "grunt-recess": "~0.3.1"
+  }
+}

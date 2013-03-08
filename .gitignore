@@ -1,0 +1,28 @@
+# IDE-specific files and dirs
+node_modules/
+.project
+.settings
+.metadata
+
+# Windows-specific
+thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# MacOSX-specific
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Temp files, logs and similar garbage
+*.tmp
+*.log
+*.dat
+
+# Build-related files (this section should include location of all build-related bits)
+build/
