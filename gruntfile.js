@@ -9,7 +9,7 @@ module.exports = function (grunt) {
 		'recess': {
 
 			'lint': {
-				'src': 'src/styles/*.less',
+				'src': 'styles/*.less',
 				'options': {
 					'compile': false,
 					'compress': false,
@@ -200,6 +200,7 @@ module.exports = function (grunt) {
 	grunt.registerTask('copy-misc', ['copy:access', 'copy:data', 'copy:scripts', 'copy:images', 'copy:branding', 'copy:backend', 'copy:share']);
 
 	grunt.registerTask('dev', ['clean:build', 'recess:lint', 'recess:dev', 'jshint:dev', 'concat', 'copy:html-dev', 'copy-misc', 'watch']);
+	grunt.registerTask('dev-server', ['clean:build', 'recess:lint', 'recess:release', 'jshint:dev', 'concat', 'copy:html-release', 'copy:xml', 'copy-misc', 'clean:release']);
 	grunt.registerTask('release', ['clean:build', 'recess:lint', 'recess:release', 'jshint:release', 'uglify', 'copy:html-release', 'copy:xml', 'copy-misc', 'clean:release']);
 
 };
