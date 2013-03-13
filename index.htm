@@ -18,14 +18,30 @@
 				'scripts/vendor.js',
 				'scripts/scripts.js'
 			],
-			'complete': function () { $(window.init); }
+			'complete': function complete () { domready(window.init); }
 		});
 		</script>
 	</head>
-	<body>
+	<body class="state-0">
 
-		<!-- App content -->
-		<canvas id="physics_test" width="640" height="480"></canvas>
+		<div class="wrapper">
+
+			<header>Football</header>
+			<section id="score">
+				<div id="local"></div>
+				<div id="team"></div>
+			</section>
+
+			<section id="controls">
+				<button type="button">Play the game</button>
+				<p class="introduction">To play the game, press the button below and start bouncing the ball.</p>
+				<p class="gameover">Congratulations on the round! To play again, simply press the button below.</p>
+				<p class="late">You have joined an ongoing game. You will be able to join as soon as this round is done.</p>
+			</section>
+
+		</div>
+
+		<canvas id="physics_test"></canvas>
 
 	</body>
 </html>
