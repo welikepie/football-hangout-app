@@ -51,7 +51,6 @@ window.init = function () {
 					},
 					'set': function setState (state) {
 						state = parseInt(state, 10);
-						console.log('State set: ', state);
 						if (localState !== state) {
 							localState = state;
 							bodyTag.className = 'state-' + localState;
@@ -389,14 +388,10 @@ window.init = function () {
 		 */
 		gapi.hangout.data.onStateChanged.add(function handleSharedState (ev) {
 
-			console.log('sharedStateChange');
-
 			var currentGameState = game.state.get(),
 				newGameState = parseInt(ev.state.gameState, 10),
 				lastScore = parseInt(ev.state.lastScore, 10),
 				temp;
-
-			console.log('Last scores: ', game.lastScore, lastScore);
 
 			// Save last state for easier access
 			lastSharedState = ev.state;
@@ -412,7 +407,6 @@ window.init = function () {
 			}
 
 			// Update game scores
-			console.log('test: ', currentGameState, (lastScore > game.lastScore));
 			if ((currentGameState === game.state.PLAYING) && (lastScore > game.lastScore)) {
 				game.lastScore = lastScore;
 				temp = {};
@@ -439,8 +433,6 @@ window.init = function () {
 		// BIND GAME EVENTS
 		bean.on(game, 'onGameStart', function onGameStart () {
 
-			console.log('onGameStart');
-
 			physics.createTracker();
 			physics.createBall();
 
@@ -448,8 +440,6 @@ window.init = function () {
 
 		});
 		bean.on(game, 'onGameLost', function onGameLost () {
-
-			console.log('onGameLost');
 
 			physics.destroyTracker();
 			physics.destroyBall();
@@ -470,19 +460,7 @@ window.init = function () {
 			gapi.hangout.data.submitDelta(delta, removal);
 
 		});
-		bean.on(game, 'onGameEnd', function () {
-
-			console.log('onGameEnd');
-
-		});
-		bean.on(game, 'onLateJoin', function () {
-
-			alert('onLateJoin');
-
-		});
 		bean.on(game, 'onPointScored', function onPointScored (points) {
-
-			console.log('onPointScored');
 
 			// Update point storage
 			game.scores.set(points);
@@ -669,10 +647,10 @@ window.init = function () {
 				.filter(function (item) { return item.substr(0, 6) === 'score|' && !_.has(delta, item); })
 				.value();
 
-			console.log('Start: ', delta, removal);
 			gapi.hangout.data.submitDelta(delta, removal);
 
 		});
+		bean.on(document.getElementById('share'), 'click', window.open.bind(window, document.getElementById('share').href, 'Share', 'width=600,height=450'));
 
 	};
 

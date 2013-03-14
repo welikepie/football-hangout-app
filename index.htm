@@ -4,7 +4,11 @@
 		<title><%= pkg.app.title %></title>
 		<!--<base href="">-->
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+		<link rel="stylesheet" href="styles/bootstrap.css">
+		<link rel="stylesheet" href="styles/flat-ui.css">
 		<link rel="stylesheet" href="styles/styles.css">
+
 		<script type="text/javascript" src="scripts/other/modernizr.js"></script>
 		<script type="text/javascript">
 		var _gaq = _gaq || [];
@@ -23,25 +27,24 @@
 		</script>
 	</head>
 	<body class="state-0">
-
 		<div class="wrapper">
 
-			<header>Football</header>
+			<header>
+				<h1>Football Hangout</h1>
+			</header>
 			<section id="score">
-				<div id="local"></div>
-				<div id="team"></div>
+				<div id="local">333</div>
+				<div id="team">56</div>
 			</section>
 
 			<section id="controls">
-				<button type="button">Play the game</button>
+				<button type="button" class="btn btn-large btn-block">Play the game</button>
 				<p class="introduction">To play the game, press the button below and start bouncing the ball.</p>
 				<p class="gameover">Congratulations on the round! To play again, simply press the button below.</p>
 				<p class="late">You have joined an ongoing game. You will be able to join as soon as this round is done.</p>
+				<a href="https://plus.google.com/share?url=<%= encodeURIComponent(pkg.app.appUrl + '?test=foo&bar=zoo') %>" target="_blank" id="share">Share the app</a>
 			</section>
 
 		</div>
-
-		<canvas id="physics_test"></canvas>
-
 	</body>
 </html>

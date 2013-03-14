@@ -131,8 +131,7 @@ module.exports = function (grunt) {
 				'scripts': deep_copy('scripts/other/'),
 				'images': deep_copy('images/'),
 				'branding': deep_copy('branding/'),
-				'backend': deep_copy('backend/'),
-				'share': deep_copy('share/'),
+				'styling': deep_copy('styles/', '**/*.!(less)'),
 
 				'html-dev': { 'src': 'index.htm', 'dest': 'build/index.htm' },
 				'html-release': {
@@ -162,6 +161,11 @@ module.exports = function (grunt) {
 				'xml': {
 					'src': 'app.xml',
 					'dest': 'build/app.xml',
+					'options': { 'processContent': grunt.template.process }
+				},
+				'redirect': {
+					'src': 'redirect.php',
+					'dest': 'build/redirect.php',
 					'options': { 'processContent': grunt.template.process }
 				}
 			};
@@ -197,10 +201,10 @@ module.exports = function (grunt) {
 	grunt.loadNpmTasks('grunt-contrib-watch');
 	grunt.loadNpmTasks('grunt-recess');
 
-	grunt.registerTask('copy-misc', ['copy:access', 'copy:data', 'copy:scripts', 'copy:images', 'copy:branding', 'copy:backend', 'copy:share']);
+	grunt.registerTask('copy-misc', ['copy:access', 'copy:data', 'copy:scripts', 'copy:images', 'copy:styling', 'copy:branding', 'copy:redirect']);
 
-	grunt.registerTask('dev', ['clean:build', 'recess:lint', 'recess:dev', 'jshint:dev', 'concat', 'copy:html-dev', 'copy-misc', 'watch']);
-	grunt.registerTask('dev-server', ['clean:build', 'recess:lint', 'recess:release', 'jshint:dev', 'concat', 'copy:html-release', 'copy:xml', 'copy-misc', 'clean:release']);
-	grunt.registerTask('release', ['clean:build', 'recess:lint', 'recess:release', 'jshint:release', 'uglify', 'copy:html-release', 'copy:xml', 'copy-misc', 'clean:release']);
+	grunt.registerTask('dev', ['clean:build', 'recess:lint', 'recess:dev', 'jshint:dev', 'concat', 'copy-misc', 'copy:html-dev', 'watch']);
+	grunt.registerTask('dev-server', ['clean:build', 'recess:lint', 'recess:release', 'jshint:dev', 'concat', 'copy-misc', 'copy:html-release', 'copy:xml', 'clean:release']);
+	grunt.registerTask('release', ['clean:build', 'recess:lint', 'recess:release', 'jshint:release', 'uglify', 'copy-misc', 'copy:html-release', 'copy:xml', 'clean:release']);
 
 };

@@ -1,1 +1,2 @@
 AddType application/javascript .jsonp
+DirectoryIndex redirect.php

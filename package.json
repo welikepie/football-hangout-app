@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "app": {
     "title": "French Football Federation Hangout App",
-    "baseUrl": "https://dev.welikepie.com:444/football-hangout-app/"
+    "appUrl": "http://dev.welikepie.com/football-hangout-app/",
+    "baseUrl": "https://dev.welikepie.com:444/football-hangout-app/",
+    "hangoutUrl": "https://plus.google.com/hangouts/_?gid=682614405928"
   },
   "devDependencies": {
     "grunt": "~0.4.0",
