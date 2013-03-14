@@ -35,6 +35,7 @@ header {
 	margin-bottom: 24px;
 
 	> * {
+		position: relative;
 		display: block;
 		width: 260px;
 		height: 100px;
@@ -49,6 +50,19 @@ header {
 		text-indent: 36px;
 
 		background: url('../images/counter.png') no-repeat center bottom;
+
+		.counter {
+			position: absolute; top: 0;
+			display: block;
+			width: 100px;
+			height: 100px;
+			background: url('../images/counter_anim.png') no-repeat;
+
+			&.step0 { background-position: 0 0; }
+			&.step1 { background-position: -100px 0; }
+			&.step2 { background-position: -200px 0; }
+			&.step3 { background-position: -300px 0; }
+		}
 	}
 }
 .btn { margin-bottom: 24px; }

@@ -460,6 +460,46 @@ window.init = function () {
 			gapi.hangout.data.submitDelta(delta, removal);
 
 		});
+
+		var changePoints = function animPoints (counter, number) {
+
+			var newAmount = parseInt(number, 10),
+				oldAmount = counter.innerHTML,
+				counter_pos = [],
+				i, anim_func, style_func;
+
+			// Determine which counters should be made
+			if (newAmount >= 1000) { newAmount = 999; }
+			newAmount = '' + newAmount;
+
+			for (i = Math.max(newAmount.length, oldAmount.length) - 1; i >= 0; i -= 1) {
+				if (newAmount.substr(i, 1) !== oldAmount.substr(i, 1)) {
+					counter_pos.push(i);
+				}
+			}
+			counter_pos.sort();
+			counter_pos = _.map(counter_pos, function (index) {
+				var el = document.createElement('div');
+				el.className = 'counter step3';
+				el.style.left = (index * 80) + 'px';
+				counter.appendChild(el);
+				return el;
+			});
+
+			i = 3;
+			style_func = function (el) { el.className = 'counter step' + i; };
+			anim_func = function counterAnimation () {
+				i -= 1;
+				if (i === -1) { counter.innerHTML = newAmount; }
+				if (i < 0) { _.each(counter_pos, function (el) { counter.removeChild(el); }); }
+				else {
+					_.each(counter_pos, style_func);
+					window.setTimeout(anim_func, 100);
+				}
+			};
+			window.setTimeout(anim_func, 100);
+
+		};
 		bean.on(game, 'onPointScored', function onPointScored (points) {
 
 			// Update point storage
@@ -467,8 +507,10 @@ window.init = function () {
 			var newScores = game.scores.get();
 
 			// Update DOM to reflect new points
-			document.getElementById('local').innerHTML = newScores[gapi.hangout.getLocalParticipantId()];
-			document.getElementById('team').innerHTML = _.reduce(newScores, function (a, b) { return a + b; });
+			changePoints(document.getElementById('local'), newScores[gapi.hangout.getLocalParticipantId()]);
+			changePoints(document.getElementById('team'), _.reduce(newScores, function (a, b) { return a + b; }));
+			//document.getElementById('local').innerHTML = newScores[gapi.hangout.getLocalParticipantId()];
+			//document.getElementById('team').innerHTML = _.reduce(newScores, function (a, b) { return a + b; });
 
 		});
 
