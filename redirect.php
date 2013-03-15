@@ -20,7 +20,7 @@
 	</head>
 	<body>
 		<img itemprop="image" src="<%= pkg.app.appUrl %>images/logo_big.png" width="126" height="136">
-		<p itemprop="description">Play ball with other people on Hangouts!</p>
-		<a href="<%= pkg.app.hangoutUrl %>">Follow through to the app!</a>
+		<p itemprop="description">Jouer sur Google Hangout et voir qui peut garder la balle plus longtemps!</p>
+		<a href="<%= pkg.app.hangoutUrl %>">App!</a>
 	</body>
 </html>

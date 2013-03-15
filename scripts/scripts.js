@@ -27,7 +27,9 @@ window.init = function () {
 			function (callback) { window.setTimeout(function () { callback((new Date()).getTime()); }, 1000 / 60); };
 	})();
 
-	var game = (function (undefined) {
+	var //baseUrl = document.getElementsByTagName('base').length ? document.getElementsByTagName('base')[0].href : '',
+		baseUrl = 'http://dev.welikepie.com/football-hangout-app/',
+		game = (function (undefined) {
 
 		/* EVENTS:
 		 * onGameStart   - fired when the game starts
@@ -129,6 +131,9 @@ window.init = function () {
 	}()),
 	lastSharedState = {},
 	bodyTag = document.getElementsByTagName('body')[0],
+	filterPlayers = function filterPlayer (players) {
+		return _.filter(players, function (player) { return player.hasAppEnabled && player.hasCamera; });
+	},
 
 	physics = {
 		'world': null,
@@ -232,7 +237,7 @@ window.init = function () {
 				body_def.linearDamping = 0;
 
 				if (ball_position) { body_def.position = ball_position; }
-				else { body_def.position = new Vector(physics.area_width / 2, physics.area_height / 3); }
+				else { body_def.position = new Vector(physics.area_width / 2, physics.area_height / 6); }
 
 				if (ball_velocity) { body_def.linearVelocity = ball_velocity; }
 				else { body_def.linearVelocity = nullVector; }
@@ -301,19 +306,15 @@ window.init = function () {
 
 		},
 		'destroyTracker': function destroyTracker () {
-
 			if (physics.track_joint) { physics.destroyJoint(); }
 			if (physics.head_tracker) {
 				physics.world.DestroyBody(physics.head_tracker);
 				physics.head_tracker = null;
 			}
-
 		},
 		'destroyBall': function destroyBall () {
-
 			if (physics.ball_overlay) { physics.ball_overlay.dispose(); physics.ball_overlay = null; }
 			if (physics.ball) { physics.world.DestroyBody(physics.ball); physics.ball = null; }
-
 		},
 		'createJoint': function createJoint () {
 			if (physics.track_joint) { physics.destroyJoint(); }
@@ -332,6 +333,35 @@ window.init = function () {
 	},
 	Vector = Box2D.Common.Math.b2Vec2,
 	nullVector = new Vector(0, 0),
+
+	overlays = {
+		'countdown': [
+			{
+				'resource': null,
+				'overlay': null
+			},
+			{
+				'resource': null,
+				'overlay': null
+			},
+			{
+				'resource': null,
+				'overlay': null
+			},
+			{
+				'resource': null,
+				'overlay': null
+			}
+		],
+		'lost': {
+			'resource': null,
+			'overlay': null
+		},
+		'end': {
+			'resource': null,
+			'overlay': null
+		}
+	},
 
 	tick = function tick (timestamp) {
 
@@ -423,20 +453,59 @@ window.init = function () {
 
 			if (game.state.get() === game.state.PLAYING) {
 				// Check for list of players that started the game, but are not present anymore
-				var presentPlayers = _.pluck(ev.enabledParticipants, 'id'),
+				var presentPlayers = _.pluck(filterPlayers(ev.enabledParticipants), 'id'),
 					droppedPlayers = _.filter(_.keys(game.scores.get()), function (item) { return !_.contains(presentPlayers, item); });
 				if (droppedPlayers.length) { bean.fire(game, 'onPlayerDrop', droppedPlayers); }
 			}
 
 		});
 
+		gapi.hangout.av.setLocalParticipantVideoMirrored(false);
+
 		// BIND GAME EVENTS
 		bean.on(game, 'onGameStart', function onGameStart () {
 
+			var start_time,
+				init_overlay = physics.ball_overlay_res.createOverlay({
+					'position': {'x': 0, 'y': 0},
+					'scale': {
+						'magnitude': 0,
+						'reference': gapi.hangout.av.effects.ScaleReference.HEIGHT
+					}
+				}),
+				countdown_func = function (index) {
+					if ((overlays.countdown.length - 1) > index) { overlays.countdown[index + 1].overlay.setVisible(false); }
+					if (index >= 0) {
+						overlays.countdown[index].overlay.setVisible(true);
+						window.setTimeout(_.bind(countdown_func, this, index - 1), 750);
+					} else {
+						init_overlay.setVisible(true);
+						start_time = (new Date()).getTime();
+						window.requestAnimationFrame(ballanim_func);
+					}
+				},
+				ballanim_func = function (timestamp) {
+					var factor = (timestamp - start_time) / 1000;
+					if (factor >= 1) {
+						init_overlay.setVisible(false);
+						init_overlay.dispose(); init_overlay = null;
+						if (physics.ball_overlay) { physics.ball_overlay.setVisible(true); }
+						window.requestAnimationFrame(tick);
+					} else {
+						init_overlay.setScale(
+							factor * 0.75,
+							gapi.hangout.av.effects.ScaleReference.HEIGHT
+						);
+						window.requestAnimationFrame(ballanim_func);
+					}
+				};
+
 			physics.createTracker();
 			physics.createBall();
-
-			window.setTimeout(tick, 2500);
+			console.dir(physics);
+			if (physics.ball_overlay) { physics.ball_overlay.setVisible(false); }
+			init_overlay.setVisible(false);
+			countdown_func(3);
 
 		});
 		bean.on(game, 'onGameLost', function onGameLost () {
@@ -444,7 +513,9 @@ window.init = function () {
 			physics.destroyTracker();
 			physics.destroyBall();
 
-			var delta = {}, removal = [], newPlayerCount = parseInt(lastSharedState.playerCount, 10) - 1;
+			var delta = {}, removal = [],
+				newPlayerCount = parseInt(lastSharedState.playerCount, 10) - 1;
+
 			if (newPlayerCount <= 0) {
 				delta.gameState = '' + game.state.ENDED;
 				removal = _.chain(lastSharedState)
@@ -458,6 +529,15 @@ window.init = function () {
 			}
 
 			gapi.hangout.data.submitDelta(delta, removal);
+
+			overlays.lost.overlay.setVisible(true);
+			window.setTimeout(_.bind(overlays.lost.overlay.setVisible, overlays.lost.overlay, false), 1000);
+
+		});
+		bean.on(game, 'onGameEnd', function onGameEnd () {
+
+			overlays.end.overlay.setVisible(true);
+			window.setTimeout(_.bind(overlays.end.overlay.setVisible, overlays.end.overlay, false), 1000);
 
 		});
 
@@ -491,7 +571,7 @@ window.init = function () {
 			anim_func = function counterAnimation () {
 				i -= 1;
 				if (i === -1) { counter.innerHTML = newAmount; }
-				if (i < 0) { _.each(counter_pos, function (el) { counter.removeChild(el); }); }
+				if (i < 0) { _.each(counter_pos, function (el) { try { counter.removeChild(el); } catch (e) {} }); }
 				else {
 					_.each(counter_pos, style_func);
 					window.setTimeout(anim_func, 100);
@@ -538,7 +618,7 @@ window.init = function () {
 			body_def = new Box2D.Dynamics.b2BodyDef(),
 			fixture_def = new Box2D.Dynamics.b2FixtureDef(),
 			contact = new Box2D.Dynamics.b2ContactListener(),
-			sharedState;
+			sharedState, i;
 
 		physics.area_width = video.getWidth(),
 		physics.area_height = video.getHeight();
@@ -661,10 +741,57 @@ window.init = function () {
 			}
 		});
 
-		// Load image resource for the ball
-		physics.ball_overlay_res = gapi.hangout.av.effects.createImageResource(
-			'http://dev.welikepie.com/football-hangout-app/images/football.png'
-		);
+		// Load image resources
+		physics.ball_overlay_res = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/football.png');
+		overlays.lost.resource = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/overlay_lost.png');
+		overlays.lost.resource.onLoad.add(function createOverlay (ev) {
+			if (ev.isLoaded) {
+				overlays.lost.overlay = overlays.lost.resource.createOverlay({
+					'position': {'x': 0, 'y': 0},
+					'scale': {
+						'magnitude': 0.35,
+						'reference': gapi.hangout.av.effects.ScaleReference.HEIGHT
+					}
+				});
+				overlays.lost.overlay.setVisible(false);
+			} else {
+				console.error('Failure while loading ' + overlays.lost.resource.getUrl() + ' overlay.');
+			}
+		});
+		overlays.end.resource = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/overlay_end.png');
+		overlays.end.resource.onLoad.add(function createOverlay (ev) {
+			if (ev.isLoaded) {
+				overlays.end.overlay = overlays.end.resource.createOverlay({
+					'position': {'x': 0, 'y': 0},
+					'scale': {
+						'magnitude': 0.35,
+						'reference': gapi.hangout.av.effects.ScaleReference.HEIGHT
+					}
+				});
+				overlays.end.overlay.setVisible(false);
+			} else {
+				console.error('Failure while loading ' + overlays.end.resource.getUrl() + ' overlay.');
+			}
+		});
+		_.each(overlays.countdown, function (obj, index) {
+
+			obj.resource = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/overlay_count' + index + '.png');
+			obj.resource.onLoad.add(function createOverlay (ev) {
+				if (ev.isLoaded) {
+					obj.overlay = obj.resource.createOverlay({
+						'position': {'x': 0, 'y': 0},
+						'scale': {
+							'magnitude': 0.35,
+							'reference': gapi.hangout.av.effects.ScaleReference.HEIGHT
+						}
+					});
+					obj.overlay.setVisible(false);
+				} else {
+					console.error('Failure while loading ' + obj.resource.getUrl() + ' overlay.');
+				}
+			});
+
+		});
 
 		// Set to late join state if appropriate
 		sharedState = gapi.hangout.data.getState();
@@ -674,23 +801,25 @@ window.init = function () {
 		) { game.state.set(game.state.LATEJOIN); }
 
 		bean.on(document.getElementsByTagName('button')[0], 'click', function () {
+			if (game.state.get() !== game.state.PLAYING) {
 
-			var participants = gapi.hangout.getEnabledParticipants(),
-				removal = [],
-				delta = {
-					'gameState': '' + game.state.PLAYING,
-					'playerCount': '' + participants.length,
-					'lastScore': '' + (new Date()).getTime()
-				};
+				var participants = filterPlayers(gapi.hangout.getEnabledParticipants()),
+					removal = [],
+					delta = {
+						'gameState': '' + game.state.PLAYING,
+						'playerCount': '' + participants.length,
+						'lastScore': '' + (new Date()).getTime()
+					};
 
-			_.each(participants, function (player) { delta['score|' + player.id] = '0'; });
-			removal = _.chain(lastSharedState)
-				.keys()
-				.filter(function (item) { return item.substr(0, 6) === 'score|' && !_.has(delta, item); })
-				.value();
+				_.each(participants, function (player) { delta['score|' + player.id] = '0'; });
+				removal = _.chain(lastSharedState)
+					.keys()
+					.filter(function (item) { return item.substr(0, 6) === 'score|' && !_.has(delta, item); })
+					.value();
 
-			gapi.hangout.data.submitDelta(delta, removal);
+				gapi.hangout.data.submitDelta(delta, removal);
 
+			}
 		});
 		bean.on(document.getElementById('share'), 'click', window.open.bind(window, document.getElementById('share').href, 'Share', 'width=600,height=450'));
 

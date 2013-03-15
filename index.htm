@@ -30,7 +30,7 @@
 		<div class="wrapper">
 
 			<header>
-				<h1>Football Hangout</h1>
+				<h1><%= pkg.app.title %></h1>
 			</header>
 			<section id="score">
 				<div id="local">0</div>
@@ -38,11 +38,11 @@
 			</section>
 
 			<section id="controls">
-				<button type="button" class="btn btn-large btn-block">Play the game</button>
-				<p class="introduction">To play the game, press the button below and start bouncing the ball.</p>
-				<p class="gameover">Congratulations on the round! To play again, simply press the button below.</p>
-				<p class="late">You have joined an ongoing game. You will be able to join as soon as this round is done.</p>
-				<a href="https://plus.google.com/share?url=<%= encodeURIComponent(pkg.app.appUrl + '?test=foo&bar=zoo') %>" target="_blank" id="share">Share the app</a>
+				<button type="button" class="btn btn-large btn-block">Jouer</button>
+				<p class="introduction">Pour jouer le jeu, appuyez sur le bouton ci-dessous, puis essayez de faire rebondir la balle sur la tête.</p>
+				<p class="gameover">Félicitations! Pour jouer, appuyez sur le bouton ci-dessous.</p>
+				<p class="late">Vous avez rejoint un jeu en cours. Vous pourrez rejoindre la partie lorsque cette manche est terminée.</p>
+				<a href="https://plus.google.com/share?url=<%= encodeURIComponent(pkg.app.appUrl) %>" target="_blank" id="share">Partager l'application</a>
 			</section>
 
 		</div>
