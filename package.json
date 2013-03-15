@@ -2,9 +2,9 @@
   "name": "fff_hangout_app",
   "version": "0.0.1",
   "app": {
-    "title": "Football Hangout App",
-    "appUrl": "http://dev.welikepie.com/football-hangout-app/",
-    "baseUrl": "https://dev.welikepie.com:444/football-hangout-app/",
+    "title": "Football Hangout",
+    "appUrl": "https://d231e2721vukcp.cloudfront.net/football-hangout/",
+    "baseUrl": "https://d231e2721vukcp.cloudfront.net/football-hangout/",
     "hangoutUrl": "https://plus.google.com/hangouts/_?gid=682614405928"
   },
   "devDependencies": {

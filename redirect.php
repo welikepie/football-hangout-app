@@ -4,9 +4,13 @@
 
 	if ($is_snippet) {
 		header('HTTP/1.1 200 OK', true, 200);
+		header('Cache-Control: no-cache, no-store, max-age=0, must-revalidate');
+		header('Expires: Fri, 01 Jan 1990 00:00:00 GMT');
 		header('Content-Type: text/html; charset=utf-8');
 	} else {
 		header('HTTP/1.1 303 See Other', true, 303);
+		header('Cache-Control: no-cache, no-store, max-age=0, must-revalidate');
+		header('Expires: Fri, 01 Jan 1990 00:00:00 GMT');
 		header('Location: <%= pkg.app.hangoutUrl %>');
 		exit();
 	}
