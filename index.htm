@@ -19,8 +19,8 @@
 			'load': [
 				'https://ssl.google-analytics.com/ga.js',
 				'https://hangoutsapi.talkgadget.google.com/hangouts/api/hangout.js?v=1.3',
-				'scripts/vendor.js',
-				'scripts/scripts.js'
+				'scripts/vendor.js?foo=0',
+				'scripts/scripts.js?foo=2'
 			],
 			'complete': function complete () { domready(window.init); }
 		});
@@ -42,7 +42,8 @@
 				<p class="introduction">Pour jouer le jeu, appuyez sur le bouton ci-dessous, puis essayez de faire rebondir la balle sur la tête.</p>
 				<p class="gameover">Félicitations! Pour jouer, appuyez sur le bouton ci-dessous.</p>
 				<p class="late">Vous avez rejoint un jeu en cours. Vous pourrez rejoindre la partie lorsque cette manche est terminée.</p>
-				<a href="https://plus.google.com/share?url=<%= encodeURIComponent(pkg.app.appUrl) %>" target="_blank" id="share">Partager l'application</a>
+				<a href="https://plus.google.com/share?url=<%= encodeURIComponent('http://hosted.welikepie.com/football-hangout/') %>" target="_blank" id="share">Partager l'application</a>
+				<a href="https://plus.google.com/communities/101011174280932158067" target="_blank" id="community">Rejoignez les Bleus</a>
 			</section>
 
 		</div>

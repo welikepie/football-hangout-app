@@ -27,7 +27,8 @@ window.init = function () {
 			function (callback) { window.setTimeout(function () { callback((new Date()).getTime()); }, 1000 / 60); };
 	})();
 
-	var baseUrl = document.getElementsByTagName('base').length ? document.getElementsByTagName('base')[0].href : '',
+	var //baseUrl = document.getElementsByTagName('base').length ? document.getElementsByTagName('base')[0].href : '',
+		baseUrl = 'http://hosted.welikepie.com/football-hangout/',
 		game = (function (undefined) {
 
 		/* EVENTS:
@@ -257,7 +258,7 @@ window.init = function () {
 				physics.ball.CreateFixture(fixture_def);
 
 				// Calculate gravity vector based on new ball
-				physics.gravity_vector = new Vector(0, physics.gravity * physics.points_factor);
+				physics.gravity_vector = new Vector(0, physics.gravity);
 
 				// If overlay exists, adjust its size, else create new one
 				if (physics.ball_overlay) {
@@ -434,7 +435,8 @@ window.init = function () {
 				}
 			}
 
-			physics.world.Step(1 / 20, 5, 5);
+
+			physics.world.Step(physics.points_factor / 20, 5, 5);
 			physics.world.DrawDebugData();
 			physics.world.ClearForces();
 			if ((typeof timestamp !== 'boolean') || !timestamp) { window.requestAnimationFrame(tick); }
@@ -495,7 +497,7 @@ window.init = function () {
 
 		});
 
-		gapi.hangout.av.setLocalParticipantVideoMirrored(false);
+		gapi.hangout.av.setLocalParticipantVideoMirrored(true);
 
 		// BIND GAME EVENTS
 		bean.on(game, 'onGameStart', function onGameStart () {
@@ -516,7 +518,8 @@ window.init = function () {
 					} else {
 						try { init_overlay.setVisible(true); } catch (e) {}
 						start_time = (new Date()).getTime();
-						window.requestAnimationFrame(ballanim_func);
+						window.setTimeout(function () { ballanim_func((new Date()).getTime()); }, 50);
+						//window.requestAnimationFrame(ballanim_func);
 					}
 				},
 				ballanim_func = function (timestamp) {
@@ -531,7 +534,8 @@ window.init = function () {
 							factor * 0.75,
 							gapi.hangout.av.effects.ScaleReference.HEIGHT
 						); } catch (e) {}
-						window.requestAnimationFrame(ballanim_func);
+						window.setTimeout(function () { ballanim_func((new Date()).getTime()); }, 50);
+						//window.requestAnimationFrame(ballanim_func);
 					}
 				};
 
@@ -692,7 +696,7 @@ window.init = function () {
 				// Only count downward-moving ball
 				if (bodyB.GetLinearVelocity().y > 0) {
 
-					physics.points_factor += 0.5;
+					physics.points_factor += 1;
 					physics.gravity_vector = new Vector(0, physics.gravity * physics.points_factor);
 
 					delta = {}; id = gapi.hangout.getLocalParticipantId();
@@ -746,7 +750,7 @@ window.init = function () {
 
 		// Set up handling of incoming face tracking data;
 		// specifically, the update of tracker position and rescaling
-		gapi.hangout.av.effects.onFaceTrackingDataChanged.add(function faceDataChange (faceData) {
+		var faceDataChange = function faceDataChange (faceData) {
 			var i, scale,
 				biggest_scale = -1,
 				currentGameState = game.state.get();
@@ -798,6 +802,14 @@ window.init = function () {
 				}
 
 			}
+		};
+		gapi.hangout.av.effects.onFaceTrackingDataChanged.add(faceDataChange);
+		faceDataChange({
+			'hasFace': true,
+			'leftEye': {'x': -0.05, 'y': 0},
+			'rightEye': {'x': 0.05, 'y': 0},
+			'noseRoot': {'x': 0, 'y': 0},
+			'roll': 0
 		});
 
 		// Load image resources
