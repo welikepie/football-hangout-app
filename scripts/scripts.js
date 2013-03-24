@@ -24,7 +24,7 @@ window.init = function () {
 		return window.requestAnimationFrame ||
 			window.webkitRequestAnimationFrame ||
 			window.mozRequestAnimationFrame ||
-			function (callback) { window.setTimeout(function () { callback((new Date()).getTime()); }, 1000 / 60); };
+			function shimRequestAnimationFrame (callback) { window.setTimeout(function () { callback((new Date()).getTime()); }, 1000 / 60); };
 	})();
 
 	var //baseUrl = document.getElementsByTagName('base').length ? document.getElementsByTagName('base')[0].href : '',
@@ -141,9 +141,8 @@ window.init = function () {
 		'ball': null,
 		'track_joint': null,
 		'track_joint_def': null,
-		'gravity': 16,
-		'gravity_vector': null,
-		'points_factor': 1,
+		'movement_factor': 16,
+		'speedup_factor': 1,
 		'velocity_mods': [],
 
 		'scaling_map': {
@@ -247,18 +246,16 @@ window.init = function () {
 
 				if (ball_velocity) { body_def.linearVelocity = ball_velocity; }
 				else { body_def.linearVelocity = nullVector; }
+				//else { body_def.linearVelocity = new Vector(0, physics.movement_factor * physics.speedup_factor); }
 
 				fixture_def.friction = 0.5;
-				fixture_def.restitution = 333;
+				fixture_def.restitution = 1;
 				fixture_def.shape = new Box2D.Collision.Shapes.b2CircleShape();
 				fixture_def.shape.SetRadius(physics.unit_width * 1.25);
 				fixture_def.density = 1;
 
 				physics.ball = physics.world.CreateBody(body_def);
 				physics.ball.CreateFixture(fixture_def);
-
-				// Calculate gravity vector based on new ball
-				physics.gravity_vector = new Vector(0, physics.gravity);
 
 				// If overlay exists, adjust its size, else create new one
 				if (physics.ball_overlay) {
@@ -372,53 +369,24 @@ window.init = function () {
 		}
 	},
 
-	getGrav = (function () {
-
-		var last = 0,
-			lastGrav = null,
-			oldPush = physics.velocity_mods.push;
-
-		physics.velocity_mods.push = function pushModified () {
-			last = 0;
-			oldPush.apply(physics.velocity_mods, arguments);
-		};
-
-		return function getGrav () {
-			var now = (new Date()).getTime();
-			if (last + 1000 < now) {
-				last = now;
-				lastGrav = physics.gravity_vector.Copy();
-				if (physics.velocity_mods.length) {
-					_.each(physics.velocity_mods, function (vel) { lastGrav.Add(vel); });
-					physics.velocity_mods.length = 0;
-				}
-				lastGrav.Multiply(physics.ball.GetMass());
-			}
-			return lastGrav;
-		};
-
-	}()),
 	tick = function tick (timestamp) {
 
-		var ball_vel,
-			ball_pos,
-			should_replace = false,
-			grav;
+		var //ball_vel,
+			ball_pos;
 
 		if (game.state.get() === game.state.PLAYING) {
 
 			if (physics.ball) {
 				ball_pos = physics.ball.GetWorldCenter();
-				ball_vel = physics.ball.GetLinearVelocity();
-				grav = getGrav();
+				//ball_vel = physics.ball.GetLinearVelocity();
 
-				if ((ball_pos.y < -physics.unit_width) && (ball_vel.y < 0)) {
+				/*if ((ball_pos.y < -physics.unit_width) && (ball_vel.y < 0)) {
 					ball_vel = new Vector(ball_vel.x, 0);
 					should_replace = true;
 				}
 
 				if (should_replace) { physics.ball.SetLinearVelocity(ball_vel); }
-				physics.ball.ApplyForce(grav, physics.ball.GetWorldCenter());
+				physics.ball.ApplyForce(grav, physics.ball.GetWorldCenter());*/
 
 				if (physics.ball_overlay) {
 					physics.ball_overlay.setPosition(
@@ -436,7 +404,7 @@ window.init = function () {
 			}
 
 
-			physics.world.Step(physics.points_factor / 20, 5, 5);
+			physics.world.Step(1 / 20, 5, 5);
 			physics.world.DrawDebugData();
 			physics.world.ClearForces();
 			if ((typeof timestamp !== 'boolean') || !timestamp) { window.requestAnimationFrame(tick); }
@@ -523,12 +491,25 @@ window.init = function () {
 					}
 				},
 				ballanim_func = function (timestamp) {
-					var factor = (timestamp - start_time) / 1000;
+					var factor = (timestamp - start_time) / 1000,
+						limiter;
 					if (factor >= 1) {
+
 						try { init_overlay.setVisible(false);
 						init_overlay.dispose(); init_overlay = null;
 						if (physics.ball_overlay) { physics.ball_overlay.setVisible(true); } } catch (e) {}
+
+						limiter = function () {
+							if (Box2D.Common.b2Settings.b2_maxTranslation < 8) {
+								Box2D.Common.b2Settings.b2_maxTranslation += 0.25;
+							}
+							if (game.state.get() === game.state.PLAYING) { window.setTimeout(limiter, 1000); }
+						};
+						Box2D.Common.b2Settings.b2_maxTranslation = 1.0;
+						window.setTimeout(limiter, 1000);
+
 						window.requestAnimationFrame(tick);
+
 					} else {
 						try { init_overlay.setScale(
 							factor * 0.75,
@@ -539,9 +520,9 @@ window.init = function () {
 					}
 				};
 
+			physics.speedup_factor = 1;
 			physics.createTracker();
 			physics.createBall();
-			physics.points_factor = 1;
 			try { if (physics.ball_overlay) { physics.ball_overlay.setVisible(false); }
 			init_overlay.setVisible(false); } catch (e) {}
 			countdown_func(3);
@@ -665,7 +646,7 @@ window.init = function () {
 		}
 
 		// Set up world with null gravity
-		physics.world = new Box2D.Dynamics.b2World(nullVector, false);
+		physics.world = new Box2D.Dynamics.b2World(new Vector(0, 12), false);
 
 		// Establish side walls to prevent the ball from falling off sides
 		body_def.type = Box2D.Dynamics.b2Body.b2_staticBody;
@@ -677,6 +658,11 @@ window.init = function () {
 		body_def.position.Set(-1, 0);
 		physics.world.CreateBody(body_def).CreateFixture(fixture_def);
 		body_def.position.Set(physics.area_width + 1, 0);
+		physics.world.CreateBody(body_def).CreateFixture(fixture_def);
+
+		// Set one up at the top to prevent ball from falling off-screen
+		fixture_def.shape.SetAsBox(physics.area_width * 2, 2);
+		body_def.position.Set(physics.area_width / 2, physics.area_height / -8);
 		physics.world.CreateBody(body_def).CreateFixture(fixture_def);
 
 		// Set up contact listener
@@ -692,17 +678,14 @@ window.init = function () {
 
 				bodyA = physics.head_tracker;
 				bodyB = physics.ball;
+				physics.speedup_factor += 0.5;
 
 				// Only count downward-moving ball
 				if (bodyB.GetLinearVelocity().y > 0) {
 
-					physics.points_factor += 1;
-					physics.gravity_vector = new Vector(0, physics.gravity * physics.points_factor);
-
 					delta = {}; id = gapi.hangout.getLocalParticipantId();
 					delta['score|' + id] = '' + (game.scores.get()[id] + 1);
 					delta.lastScore = '' + (new Date()).getTime();
-
 					gapi.hangout.data.submitDelta(delta, []);
 
 				}
@@ -713,7 +696,9 @@ window.init = function () {
 		contact.EndContact = function (contact) {
 			var bodyA = contact.GetFixtureA().GetBody(),
 				bodyB = contact.GetFixtureB().GetBody(),
-				vel;
+				ball_velocity,
+				new_velocity,
+				temp;
 
 			if (
 				((bodyA === physics.head_tracker) && (bodyB === physics.ball)) ||
@@ -722,13 +707,23 @@ window.init = function () {
 
 				bodyA = physics.head_tracker;
 				bodyB = physics.ball;
-				vel = physics.ball.GetLinearVelocity().Copy();
-				vel.Normalize();
-				vel.Multiply(Math.abs(physics.gravity_vector.y));
+				ball_velocity = physics.ball.GetLinearVelocity();
+				new_velocity = ball_velocity.Copy();
+				temp = ball_velocity.Length();
 
-				physics.velocity_mods.push(vel);
-				physics.velocity_mods.push(new Vector((Math.random() - 0.5) * (Math.abs(physics.gravity_vector.y) * 0.5), 0));
+				// Increase velocity on every hit
+				if (temp < (physics.movement_factor * physics.speedup_factor)) {
+					new_velocity = ball_velocity.Copy();
+					new_velocity.Normalize();
+					new_velocity.Multiply(physics.movement_factor * physics.speedup_factor);
+				}
 
+				temp = new_velocity.x;
+				temp += (Math.abs(new_velocity.y) * 0.4) * (Math.random() - 0.5);
+				new_velocity.Set(temp, new_velocity.y);
+				
+				physics.ball.SetLinearVelocity(new_velocity);
+				
 			}
 		};
 
