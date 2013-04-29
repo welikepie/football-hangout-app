@@ -4,7 +4,7 @@
   "app": {
     "title": "Football Hangout",
     "appUrl": "https://d231e2721vukcp.cloudfront.net/football-hangout/",
-    "baseUrl": "https://d231e2721vukcp.cloudfront.net/football-hangout/",
+    "baseUrl": "https://dev.welikepie.com:444/fff/",
     "hangoutUrl": "https://plus.google.com/hangouts/_?gid=682614405928"
   },
   "devDependencies": {
