@@ -17,7 +17,9 @@
  *             3 - game was lost locally (ball lost), needs to wait until the end
  *             4 - late join to the game, needs to wait until the end
  */
-var speedPlus = 0.4;
+var rotate;
+var speedFactor = 1; //<- factor of gravity to negate on impulse.
+//in ball create method, friction, restitution and mass make for good fun.
 var bounce;
 //bounce audio.
 var fanSong;
@@ -33,7 +35,7 @@ window.init = function() {"use strict";
 	})();
 
 	var//baseUrl = document.getElementsByTagName('base').length ? document.getElementsByTagName('base')[0].href : '',
-	baseUrl = 'http://dev.welikepie.com/fff/', game = ( function(undefined) {
+	baseUrl = 'http://dev.welikepie.com/fffDev/', game = ( function(undefined) {
 
 			/* EVENTS:
 			 * onGameStart   - fired when the game starts
@@ -132,10 +134,11 @@ window.init = function() {"use strict";
 		'ball' : null,
 		'track_joint' : null,
 		'track_joint_def' : null,
-		'movement_factor' : 16,
-		'speedup_factor' : 1,
+		'movement_factor' : 18,
+		'speedup_factor' : speedFactor * -9.8,
 		'velocity_mods' : [],
-
+		'rotateInterval' : 20,
+		'rotateTimer' : null,
 		'scaling_map' : {
 			0.06 : 25,
 			0.09 : 20,
@@ -146,12 +149,16 @@ window.init = function() {"use strict";
 
 		'ball_overlay' : null,
 		'ball_overlay_res' : null,
+		'ball_shadow' : null,
+		'ball_shadow_res' : null,
 
 		'area_width' : null,
 		'area_height' : null,
 		'unit_width' : null,
 		'unit_height' : null,
-
+		'rotator' : function rotator(rotateObject){
+			rotateObject.setRotation(rotateObject.getRotation()+rotate);
+		},
 		'createTracker' : function createTracker() {
 
 			var tracker_position, tracker_velocity, tracker_angle, tracker_joint_present = false, body_def = new Box2D.Dynamics.b2BodyDef(), fixture_def = new Box2D.Dynamics.b2FixtureDef();
@@ -173,7 +180,7 @@ window.init = function() {"use strict";
 			if (physics.last_scale) {
 
 				fixture_def.filter = new Box2D.Dynamics.b2FilterData();
-				fixture_def.friction = 0.5;
+				fixture_def.friction = 0.1;
 				fixture_def.restitution = 1;
 
 				// Set up and create Head Tracker
@@ -250,8 +257,8 @@ window.init = function() {"use strict";
 				}
 				//else { body_def.linearVelocity = new Vector(0, physics.movement_factor * physics.speedup_factor); }
 
-				fixture_def.friction = 0.5;
-				fixture_def.restitution = 0.7;
+				fixture_def.friction = 1;
+				fixture_def.restitution = 0.6;
 				fixture_def.shape = new Box2D.Collision.Shapes.b2CircleShape();
 				fixture_def.shape.SetRadius(physics.unit_width * 1.25);
 				fixture_def.density = 10;
@@ -260,11 +267,13 @@ window.init = function() {"use strict";
 				physics.ball.CreateFixture(fixture_def);
 
 				// If overlay exists, adjust its size, else create new one
-				if (physics.ball_overlay) {
+				if (physics.ball_overlay && physics.ball_shadow) {
 					physics.ball_overlay.setScale(5 / physics.last_scale, gapi.hangout.av.effects.ScaleReference.WIDTH);
+					physics.ball_shadow.setScale(5 / physics.last_scale, gapi.hangout.av.effects.ScaleReference.WIDTH);
+					
 				} else {
 
-					if (physics.ball_overlay_res.isLoaded()) {
+					if (physics.ball_overlay_res.isLoaded() && physics.ball_shadow_res.isLoaded()) {
 
 						physics.ball_overlay = physics.ball_overlay_res.createOverlay({
 							'position' : {
@@ -277,6 +286,19 @@ window.init = function() {"use strict";
 							}
 						});
 						physics.ball_overlay.setVisible(true);
+					
+							physics.ball_shadow = physics.ball_shadow_res.createOverlay({
+							'position' : {
+								'x' : (body_def.position.x / physics.area_width) - 0.5,
+								'y' : (body_def.position.y / physics.area_height) - 0.5
+							},
+							'scale' : {
+								'magnitude' : 3 / physics.last_scale,
+								'reference' : gapi.hangout.av.effects.ScaleReference.WIDTH
+							}
+						});
+						physics.ball_shadow.setVisible(true);
+						
 
 					} else {
 
@@ -288,6 +310,15 @@ window.init = function() {"use strict";
 							'setVisible' : function() {
 							}
 						};
+						physics.ball_shadow = {
+							'setScale' : function() {
+							},
+							'setPosition' : function() {
+							},
+							'setVisible' : function() {
+							}
+						};
+						
 						physics.ball_overlay_res.onLoad.add(function() {
 
 							var pos = physics.ball.GetWorldCenter();
@@ -302,6 +333,21 @@ window.init = function() {"use strict";
 								}
 							});
 							physics.ball_overlay.setVisible(true);
+						});
+						physics.ball_overlay_res.onLoad.add(function() {
+
+						var pos = physics.ball.GetWorldCenter();
+							physics.ball_shadow = physics.ball_shadow_res.createOverlay({
+								'position' : {
+									'x' : (pos.x / physics.area_width) - 0.5,
+									'y' : (pos.y / physics.area_height) - 0.5
+								},
+								'scale' : {
+									'magnitude' : 3 / physics.last_scale,
+									'reference' : gapi.hangout.av.effects.ScaleReference.WIDTH
+								}
+							});
+							physics.ball_shadow.setVisible(true);
 						});
 
 					}
@@ -322,8 +368,11 @@ window.init = function() {"use strict";
 		},
 		'destroyBall' : function destroyBall() {
 			if (physics.ball_overlay) {
+				clearTimeout(physics.rotateTimer);
 				physics.ball_overlay.dispose();
 				physics.ball_overlay = null;
+				physics.ball_shadow.dispose();
+				physics.ball_shadow = null;
 			}
 			if (physics.ball) {
 				physics.world.DestroyBody(physics.ball);
@@ -380,36 +429,18 @@ window.init = function() {"use strict";
 			if (physics.ball) {
 				var oldTime = 0;
 				ball_pos = physics.ball.GetWorldCenter();
-				//console.log(Math.floor(timestamp));
-				//console.log(physics.ball);
-				//physics.ball.ApplyForce(0.01, physics.ball.GetWorldCenter());
-				//ball_vel = physics.ball.GetLinearVelocity();
-				/*
-				if ((ball_pos.y < -physics.unit_width) && (ball_vel.y < 0)) {
-				//ball_vel = new Vector(ball_vel.x, 0);
-				//should_replace = true;
+				ball_vel = physics.ball.GetLinearVelocity();
+				if(timestamp - oldTime > 100){
 				}
-				if(timestamp - oldTime > 500){
-				oldTime = timestamp;
-				//physics.ball.ApplyForce((0,0.01), physics.ball.GetWorldCenter());
-				var temp = physics.ball.GetLinearVelocity();
-				//physics.ball.SetLinearVelocity(temp.x- 1,temp.y);
-				//console.log(physics.ball);
-				}
-				if (should_replace) {
-				//	physics.ball.SetLinearVelocity(ball_vel);
-				}*/
 
-				//physics.ball.ApplyForce(0.001, physics.ball.GetWorldCenter());
-
-				if (physics.ball_overlay) {
+				
+				if (physics.ball_overlay && physics.ball_shadow) {
 					physics.ball_overlay.setPosition((ball_pos.x / physics.area_width) - 0.5, (ball_pos.y / physics.area_height) - 0.5);
+					physics.ball_shadow.setPosition((ball_pos.x / physics.area_width) - 0.5, (ball_pos.y / physics.area_height) - 0.5);
+	
 				}
 
-				// Ball falls out of scope
 				if (ball_pos.y > physics.area_height * 1.25) {
-					//ball_pos = new Vector(physics.area_width / 2, physics.area_height / 3);
-					//physics.ball.SetPosition(ball_pos);
 					game.state.set(game.state.LOST);
 				}
 			}
@@ -434,8 +465,6 @@ window.init = function() {"use strict";
 		 */
 		bounce = gapi.hangout.av.effects.createAudioResource(baseUrl+"audio/bounceFinal.wav");
 		fanSong = gapi.hangout.av.effects.createAudioResource(baseUrl+"audio/crowdSound8.wav");
-		window.setInterval(function(){console.log(fanSong.getState());},1000);
-		window.setInterval(function(){console.log("bounce:"+bounce.getState());},1000);
 		fanSong.onLoad.add(function(ev) {
 			console.log("loaded");
 			console.log(ev);
@@ -505,7 +534,18 @@ window.init = function() {"use strict";
 					'magnitude' : 0,
 					'reference' : gapi.hangout.av.effects.ScaleReference.HEIGHT
 				}
-			}), countdown_func = function(index) {
+			}),
+			init_shadow =  physics.ball_shadow_res.createOverlay({
+				'position' : {
+					'x' : 0,
+					'y' : 0
+				},
+				'scale' : {
+					'magnitude' : 0,
+					'reference' : gapi.hangout.av.effects.ScaleReference.HEIGHT
+				}
+			}),
+			countdown_func = function(index) {
 				if ((overlays.countdown.length - 1) > index) {
 					try {
 						overlays.countdown[index + 1].overlay.setVisible(false);
@@ -521,6 +561,7 @@ window.init = function() {"use strict";
 				} else {
 					try {
 						init_overlay.setVisible(true);
+						init_shadow.setVisible(true);
 					} catch (e) {
 					}
 					start_time = (new Date()).getTime();
@@ -534,11 +575,15 @@ window.init = function() {"use strict";
 				if (factor >= 1) {
 
 					try {
+						init_shadow.setVisible(false);
 						init_overlay.setVisible(false);
 						init_overlay.dispose();
+						init_shadow.dispose();
 						init_overlay = null;
-						if (physics.ball_overlay) {
+						init_shadow = null;
+						if (physics.ball_overlay && physics.ball_shadow) {
 							physics.ball_overlay.setVisible(true);
+							physics.ball_shadow.setVisible(true);
 						}
 					} catch (e) {
 					}
@@ -559,23 +604,29 @@ window.init = function() {"use strict";
 				} else {
 					try {
 						init_overlay.setScale(factor * 0.75, gapi.hangout.av.effects.ScaleReference.HEIGHT);
+						init_shadow.setScale(factor * 0.75, gapi.hangout.av.effects.ScaleReference.HEIGHT);
 					} catch (e) {
 					}
 					window.setTimeout(function() {
 						ballanim_func((new Date()).getTime());
 					}, 50);
+					
+					
 					//window.requestAnimationFrame(ballanim_func);
 				}
 			};
 
-			physics.speedup_factor = 1;
+			//physics.speedup_factor = 1;
 			physics.createTracker();
 			physics.createBall();
 			try {
-				if (physics.ball_overlay) {
+				if (physics.ball_overlay && physics.ball_shadow) {
 					physics.ball_overlay.setVisible(false);
+					physics.ball_shadow.setVisible(false);
 				}
+				
 				init_overlay.setVisible(false);
+				init_shadow.setVisible(false);
 			} catch (e) {
 			}
 			countdown_func(3);
@@ -704,12 +755,12 @@ window.init = function() {"use strict";
 		}
 
 		// Set up world with null gravity
-		physics.world = new Box2D.Dynamics.b2World(new Vector(0, 9.8), false);
+		physics.world = new Box2D.Dynamics.b2World(new Vector(0,9.8), false);
 
 		// Establish side walls to prevent the ball from falling off sides
 		body_def.type = Box2D.Dynamics.b2Body.b2_staticBody;
 		fixture_def.friction = 0.5;
-		fixture_def.restitution = 0.5;
+		fixture_def.restitution = 1;
 		fixture_def.shape = new Box2D.Collision.Shapes.b2PolygonShape();
 		fixture_def.shape.SetAsBox(2, physics.area_height * 10);
 
@@ -721,7 +772,9 @@ window.init = function() {"use strict";
 		// Set one up at the top to prevent ball from falling off-screen
 		fixture_def.shape.SetAsBox(physics.area_width * 2, 2);
 		body_def.position.Set(physics.area_width / 2, physics.area_height / -8);
+			body_def.restitution = 0.8;
 		physics.world.CreateBody(body_def).CreateFixture(fixture_def);
+	
 
 		// Set up contact listener
 		contact.BeginContact = function(contact) {
@@ -731,8 +784,8 @@ window.init = function() {"use strict";
 
 				bodyA = physics.head_tracker;
 				bodyB = physics.ball;
-				physics.speedup_factor += speedPlus;
-
+				//physics.speedup_factor += speedPlus;
+physics.lastVelocity = physics.ball.GetLinearVelocity();
 				// Only count downward-moving ball
 				if (bodyB.GetLinearVelocity().y > 0) {
 
@@ -741,6 +794,8 @@ window.init = function() {"use strict";
 					delta['score|' + id] = '' + (game.scores.get()[id] + 1);
 					delta.lastScore = '' + (new Date()).getTime();
 					gapi.hangout.data.submitDelta(delta, []);
+							//rotator(physics.ball_overlay);
+					physics.lastVelocity = physics.ball.GetLinearVelocity();
 					bounce.play({
 						localOnly : true,
 						loop : false,
@@ -753,27 +808,15 @@ window.init = function() {"use strict";
 
 		contact.EndContact = function(contact) {
 			var bodyA = contact.GetFixtureA().GetBody(), bodyB = contact.GetFixtureB().GetBody(), ball_velocity, new_velocity, temp;
-			//physics.world.GetGravity().x gravPlus
-			if (((bodyA === physics.head_tracker) && (bodyB === physics.ball)) || ((bodyA === physics.ball) && (bodyB === physics.head_tracker))) {
-
+				if (((bodyA === physics.head_tracker) && (bodyB === physics.ball)) || ((bodyA === physics.ball) && (bodyB === physics.head_tracker))) {
 				bodyA = physics.head_tracker;
 				bodyB = physics.ball;
 				ball_velocity = physics.ball.GetLinearVelocity();
-				new_velocity = ball_velocity.Copy();
+				new_velocity = physics.lastVelocity;
 				temp = ball_velocity.Length();
-
-				// Increase velocity on every hit
-				if (temp < (physics.movement_factor * physics.speedup_factor)) {
-					new_velocity = ball_velocity.Copy();
-					new_velocity.Normalize();
-					new_velocity.Multiply(physics.movement_factor * physics.speedup_factor);
-				}
-
-				temp = new_velocity.x;
-				temp += (Math.abs(new_velocity.y) * 0.4) * (Math.random() - 0.5);
-				new_velocity.Set(temp, new_velocity.y);
-				physics.ball.SetLinearVelocity(new_velocity);
-
+				console.log(physics.ball.GetLinearVelocity());
+				physics.ball.ApplyImpulse(new Vector(temp,physics.speedup_factor),physics.ball.GetWorldCenter());
+				physics.applyForce = true;
 			}
 		};
 
@@ -868,7 +911,9 @@ window.init = function() {"use strict";
 		});
 
 		// Load image resources
-		physics.ball_overlay_res = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/football.png');
+		physics.ball_overlay_res = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/ball.png');
+		physics.ball_shadow_res = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/ballShadow.png');
+		
 		overlays.lost.resource = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/overlay_lost.png');
 		overlays.lost.resource.onLoad.add(function createOverlay(ev) {
 			if (ev.isLoaded) {
