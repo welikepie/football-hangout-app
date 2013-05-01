@@ -8,7 +8,9 @@
 		<link rel="stylesheet" href="styles/bootstrap.css">
 		<link rel="stylesheet" href="styles/flat-ui.css">
 		<link rel="stylesheet" href="styles/styles.css">
+<!--[if lt IE 9]>
 
+<![endif]-->
 		<script type="text/javascript" src="scripts/other/modernizr.js"></script>
 		<script type="text/javascript">
 		var _gaq = _gaq || [];
@@ -30,7 +32,10 @@
 		<div class="wrapper">
 
 			<header>
-				<h1><%= pkg.app.title %></h1>
+				<div id="textHeader">
+					<h1><%= pkg.app.title %></h1>
+				</div>
+				<img src="https://dev.welikepie.com:444/fffDev/images/logo.png">
 			</header>
 			<section id="score">
 				<div id="local">0</div>

@@ -18,7 +18,8 @@
  *             4 - late join to the game, needs to wait until the end
  */
 var rotate;
-var speedFactor = 1.7 * 10; //<- factor of gravity to negate on impulse.
+var speedFactor = 50;
+//<- factor of gravity to negate on impulse. Being multiplied by mass.
 //in ball create method, friction, restitution and mass make for good fun.
 var bounce;
 //bounce audio.
@@ -83,7 +84,7 @@ window.init = function() {"use strict";
 					'LATEJOIN' : 4
 
 				},
-
+				'localScore' : 0,
 				'scores' : {
 
 					'get' : function getScores() {
@@ -135,10 +136,11 @@ window.init = function() {"use strict";
 		'track_joint' : null,
 		'track_joint_def' : null,
 		'movement_factor' : 18,
-		'speedup_factor' : speedFactor * -9.8,
+		'speedup_factor' : speedFactor,
 		'velocity_mods' : [],
 		'rotateInterval' : 20,
 		'rotateTimer' : null,
+		'bounced' : false,
 		'scaling_map' : {
 			0.06 : 25,
 			0.09 : 20,
@@ -156,8 +158,10 @@ window.init = function() {"use strict";
 		'area_height' : null,
 		'unit_width' : null,
 		'unit_height' : null,
-		'rotator' : function rotator(rotateObject){
-			rotateObject.setRotation(rotateObject.getRotation()+rotate);
+		'rotator' : function rotator(rotateObject) {
+			if (rotateObject) {
+				rotateObject.setRotation(rotateObject.getRotation() + rotate);
+			}
 		},
 		'createTracker' : function createTracker() {
 
@@ -270,7 +274,7 @@ window.init = function() {"use strict";
 				if (physics.ball_overlay && physics.ball_shadow) {
 					physics.ball_overlay.setScale(5 / physics.last_scale, gapi.hangout.av.effects.ScaleReference.WIDTH);
 					physics.ball_shadow.setScale(5 / physics.last_scale, gapi.hangout.av.effects.ScaleReference.WIDTH);
-					
+
 				} else {
 
 					if (physics.ball_overlay_res.isLoaded() && physics.ball_shadow_res.isLoaded()) {
@@ -285,9 +289,9 @@ window.init = function() {"use strict";
 								'reference' : gapi.hangout.av.effects.ScaleReference.WIDTH
 							}
 						});
-						physics.ball_overlay.setVisible(true);
-					
-							physics.ball_shadow = physics.ball_shadow_res.createOverlay({
+						//physics.ball_overlay.setVisible(true);
+
+						physics.ball_shadow = physics.ball_shadow_res.createOverlay({
 							'position' : {
 								'x' : (body_def.position.x / physics.area_width) - 0.5,
 								'y' : (body_def.position.y / physics.area_height) - 0.5
@@ -297,8 +301,7 @@ window.init = function() {"use strict";
 								'reference' : gapi.hangout.av.effects.ScaleReference.WIDTH
 							}
 						});
-						physics.ball_shadow.setVisible(true);
-						
+						//physics.ball_shadow.setVisible(true);
 
 					} else {
 
@@ -318,7 +321,7 @@ window.init = function() {"use strict";
 							'setVisible' : function() {
 							}
 						};
-						
+
 						physics.ball_overlay_res.onLoad.add(function() {
 
 							var pos = physics.ball.GetWorldCenter();
@@ -336,7 +339,7 @@ window.init = function() {"use strict";
 						});
 						physics.ball_overlay_res.onLoad.add(function() {
 
-						var pos = physics.ball.GetWorldCenter();
+							var pos = physics.ball.GetWorldCenter();
 							physics.ball_shadow = physics.ball_shadow_res.createOverlay({
 								'position' : {
 									'x' : (pos.x / physics.area_width) - 0.5,
@@ -367,6 +370,7 @@ window.init = function() {"use strict";
 			}
 		},
 		'destroyBall' : function destroyBall() {
+
 			if (physics.ball_overlay) {
 				clearTimeout(physics.rotateTimer);
 				physics.ball_overlay.dispose();
@@ -375,6 +379,7 @@ window.init = function() {"use strict";
 				physics.ball_shadow = null;
 			}
 			if (physics.ball) {
+				clearTimeout(physics.rotateTimer);
 				physics.world.DestroyBody(physics.ball);
 				physics.ball = null;
 			}
@@ -430,14 +435,22 @@ window.init = function() {"use strict";
 				var oldTime = 0;
 				ball_pos = physics.ball.GetWorldCenter();
 				ball_vel = physics.ball.GetLinearVelocity();
-				if(timestamp - oldTime > 100){
+				if (timestamp - oldTime > 100) {
+				}
+				if (physics.bounced === true) {
+					console.log("-----------------------");
+					console.log(physics.ball.GetLinearVelocity());
+					physics.ball.ApplyImpulse(new Vector(0, -20000 * physics.speedup_factor), physics.ball.GetWorldCenter());
+					//console.log(new Vector(0,physics.speedup_factor*-100));
+					console.log(physics.ball.GetLinearVelocity());
+					console.log("-----------------------");
+					physics.bounced = false;
 				}
 
-				
 				if (physics.ball_overlay && physics.ball_shadow) {
 					physics.ball_overlay.setPosition((ball_pos.x / physics.area_width) - 0.5, (ball_pos.y / physics.area_height) - 0.5);
 					physics.ball_shadow.setPosition((ball_pos.x / physics.area_width) - 0.5, (ball_pos.y / physics.area_height) - 0.5);
-	
+
 				}
 
 				if (ball_pos.y > physics.area_height * 1.25) {
@@ -455,8 +468,7 @@ window.init = function() {"use strict";
 		}
 
 	}, initialize = function initialize() {
-       startHeadTracking();
-            animate();
+
 		/* GAME LOGIC
 		 * ******************************************
 		 * Bind various events coming from Hangouts API for stuff
@@ -464,8 +476,8 @@ window.init = function() {"use strict";
 		 * as well as of enabled participants, to know who drops out if drop-outs
 		 * do happen during the game.
 		 */
-		bounce = gapi.hangout.av.effects.createAudioResource(baseUrl+"audio/bounceFinal.wav");
-		fanSong = gapi.hangout.av.effects.createAudioResource(baseUrl+"audio/crowdSound8.wav");
+		bounce = gapi.hangout.av.effects.createAudioResource(baseUrl + "audio/bounceFinal.wav");
+		fanSong = gapi.hangout.av.effects.createAudioResource(baseUrl + "audio/crowdSound8.wav");
 		fanSong.onLoad.add(function(ev) {
 			console.log("loaded");
 			console.log(ev);
@@ -480,10 +492,12 @@ window.init = function() {"use strict";
 		});
 
 		gapi.hangout.data.onStateChanged.add(function handleSharedState(ev) {
-
+			console.log(ev);
+			//if(parseInt(lastSharedState.playerCount, 10) > 1){
 			var currentGameState = game.state.get(), newGameState = parseInt(ev.state.gameState, 10), lastScore = parseInt(ev.state.lastScore, 10), temp;
 
 			// Save last state for easier access
+
 			lastSharedState = ev.state;
 
 			// Update game state if it changes
@@ -503,12 +517,20 @@ window.init = function() {"use strict";
 						temp[key.substr(6)] = parseInt(value, 10);
 					}
 				});
-				bean.fire(game, 'onPointScored', temp);
+				//console.log("outside"+parseInt(lastSharedState.playerCount,10));
+				if (parseInt(lastSharedState.playerCount, 10) > 1) {
+					//console.log("inside"+parseInt(lastSharedState.playerCount,10));
+					bean.fire(game, 'onPointScored', temp);
+				} else {
+					game.scores.set(temp);
+				}
 			}
 
-		});
+		}
+		//	}
+		);
 		gapi.hangout.onEnabledParticipantsChanged.add(function checkPresentPlayers(ev) {
-
+			console.log("PLAYERS" + ev);
 			if (game.state.get() === game.state.PLAYING) {
 				// Check for list of players that started the game, but are not present anymore
 				var presentPlayers = _.pluck(filterPlayers(ev.enabledParticipants), 'id'), droppedPlayers = _.filter(_.keys(game.scores.get()), function(item) {
@@ -535,8 +557,7 @@ window.init = function() {"use strict";
 					'magnitude' : 0,
 					'reference' : gapi.hangout.av.effects.ScaleReference.HEIGHT
 				}
-			}),
-			init_shadow =  physics.ball_shadow_res.createOverlay({
+			}), init_shadow = physics.ball_shadow_res.createOverlay({
 				'position' : {
 					'x' : 0,
 					'y' : 0
@@ -545,8 +566,7 @@ window.init = function() {"use strict";
 					'magnitude' : 0,
 					'reference' : gapi.hangout.av.effects.ScaleReference.HEIGHT
 				}
-			}),
-			countdown_func = function(index) {
+			}), countdown_func = function(index) {
 				if ((overlays.countdown.length - 1) > index) {
 					try {
 						overlays.countdown[index + 1].overlay.setVisible(false);
@@ -611,8 +631,7 @@ window.init = function() {"use strict";
 					window.setTimeout(function() {
 						ballanim_func((new Date()).getTime());
 					}, 50);
-					
-					
+
 					//window.requestAnimationFrame(ballanim_func);
 				}
 			};
@@ -625,7 +644,7 @@ window.init = function() {"use strict";
 					physics.ball_overlay.setVisible(false);
 					physics.ball_shadow.setVisible(false);
 				}
-				
+
 				init_overlay.setVisible(false);
 				init_shadow.setVisible(false);
 			} catch (e) {
@@ -634,26 +653,32 @@ window.init = function() {"use strict";
 
 		});
 		bean.on(game, 'onGameLost', function onGameLost() {
-
+			console.log("gameLost");
 			physics.destroyTracker();
 			physics.destroyBall();
 
 			var delta = {}, removal = [], newPlayerCount = parseInt(lastSharedState.playerCount, 10) - 1;
 
 			if (newPlayerCount <= 0) {
+				console.log("aaaaaaand dead. : " + newPlayerCount);
 				delta.gameState = '' + game.state.ENDED;
 				removal = _.chain(lastSharedState).keys().filter(function(item) {
 					return item.substr(0, 6) === 'score|';
 				}).value();
 				removal.push('lastScore');
 				removal.push('playerCount');
+				if (newPlayerCount === 0) {
+					console.log("endGameRightHere");
+					overlays.lost.overlay.setVisible(true);
+					game.state.set(2);
+				}
 			} else {
 				delta.playerCount = '' + newPlayerCount;
 			}
-
 			gapi.hangout.data.submitDelta(delta, removal);
-
 			overlays.lost.overlay.setVisible(true);
+			//	game.state.set(2);
+			//overlays.lost.overlay.setVisible(true);
 			window.setTimeout(_.bind(overlays.lost.overlay.setVisible, overlays.lost.overlay, false), 1000);
 
 		});
@@ -719,6 +744,7 @@ window.init = function() {"use strict";
 			var newScores = game.scores.get();
 
 			// Update DOM to reflect new points
+
 			changePoints(document.getElementById('local'), newScores[gapi.hangout.getLocalParticipantId()]);
 			changePoints(document.getElementById('team'), _.reduce(newScores, function(a, b) {
 				return a + b;
@@ -756,7 +782,7 @@ window.init = function() {"use strict";
 		}
 
 		// Set up world with null gravity
-		physics.world = new Box2D.Dynamics.b2World(new Vector(0,9.8), false);
+		physics.world = new Box2D.Dynamics.b2World(new Vector(0, 9.8), false);
 
 		// Establish side walls to prevent the ball from falling off sides
 		body_def.type = Box2D.Dynamics.b2Body.b2_staticBody;
@@ -773,36 +799,43 @@ window.init = function() {"use strict";
 		// Set one up at the top to prevent ball from falling off-screen
 		fixture_def.shape.SetAsBox(physics.area_width * 2, 2);
 		body_def.position.Set(physics.area_width / 2, physics.area_height / -8);
-			body_def.restitution = 0.8;
+		body_def.restitution = 0.8;
 		physics.world.CreateBody(body_def).CreateFixture(fixture_def);
-	
 
 		// Set up contact listener
 		contact.BeginContact = function(contact) {
 			var bodyA = contact.GetFixtureA().GetBody(), bodyB = contact.GetFixtureB().GetBody(), delta, id;
 
 			if (((bodyA === physics.head_tracker) && (bodyB === physics.ball)) || ((bodyA === physics.ball) && (bodyB === physics.head_tracker))) {
-
-				bodyA = physics.head_tracker;
-				bodyB = physics.ball;
-				//physics.speedup_factor += speedPlus;
-physics.lastVelocity = physics.ball.GetLinearVelocity();
 				// Only count downward-moving ball
 				if (bodyB.GetLinearVelocity().y > 0) {
 
 					delta = {};
 					id = gapi.hangout.getLocalParticipantId();
 					delta['score|' + id] = '' + (game.scores.get()[id] + 1);
+					if (parseInt(lastSharedState.playerCount, 10) === 1) {
+						//	game.scores[id] = game.scores[id] + 1;
+						console.log(game.localScore);
+						game.localScore = game.localScore + 1;
+					}
 					delta.lastScore = '' + (new Date()).getTime();
 					gapi.hangout.data.submitDelta(delta, []);
-							//rotator(physics.ball_overlay);
+					//rotator(physics.ball_overlay);
 					physics.lastVelocity = physics.ball.GetLinearVelocity();
+					physics.bounced = true;
+					console.log("insideContact" + parseInt(lastSharedState.playerCount, 10));
+					if (parseInt(lastSharedState.playerCount, 10) === 1) {
+						//console.log("insideSettingPoints"+newScores);
+						console.log(game.localScore);
+						changePoints(document.getElementById('local'), game.localScore);
+						changePoints(document.getElementById('team'), game.localScore);
+					}
 					bounce.play({
 						localOnly : true,
 						loop : false,
 						volume : 1
 					});
-					
+
 				}
 
 			}
@@ -810,24 +843,20 @@ physics.lastVelocity = physics.ball.GetLinearVelocity();
 
 		contact.EndContact = function(contact) {
 			//var bodyA = contact.GetFixtureA().GetBody(), bodyB = contact.GetFixtureB().GetBody(), ball_velocity, new_velocity, temp;
-			var bodyA, bodyB, ball_velocity,new_velocity,temp;
-				//if (((bodyA === physics.head_tracker) && (bodyB === physics.ball)) || ((bodyA === physics.ball) && (bodyB === physics.head_tracker))) {
-				bodyA = physics.head_tracker;
-				bodyB = physics.ball;
-				ball_velocity = physics.ball.GetLinearVelocity();
-				new_velocity = physics.lastVelocity;
-				temp = ball_velocity.Length();
-				clearInterval(physics.rotateTimer);
-				rotate = (0.5 - Math.random()) / 10;
-				//rotateInterval
-				physics.rotateTimer = setInterval(function(){physics.rotator(physics.ball_overlay);},physics.rotateInterval);
-				console.log("-----------------------");
-				console.log(physics.ball.GetLinearVelocity());
-				physics.ball.ApplyImpulse(new Vector(0,physics.speedup_factor),physics.ball.GetWorldCenter());
-				console.log(physics.ball.GetLinearVelocity());
-				console.log("-----------------------");
-				physics.applyForce = true;
-				
+			var bodyA, bodyB, ball_velocity, new_velocity, temp;
+			//if (((bodyA === physics.head_tracker) && (bodyB === physics.ball)) || ((bodyA === physics.ball) && (bodyB === physics.head_tracker))) {
+			bodyA = physics.head_tracker;
+			bodyB = physics.ball;
+			ball_velocity = physics.ball.GetLinearVelocity();
+			new_velocity = physics.lastVelocity;
+			temp = ball_velocity.Length();
+			clearInterval(physics.rotateTimer);
+			rotate = (0.5 - Math.random()) / 10;
+			//rotateInterval
+			physics.rotateTimer = setInterval(function() {
+				physics.rotator(physics.ball_overlay);
+			}, physics.rotateInterval);
+
 			//}
 		};
 
@@ -924,7 +953,7 @@ physics.lastVelocity = physics.ball.GetLinearVelocity();
 		// Load image resources
 		physics.ball_overlay_res = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/ball.png');
 		physics.ball_shadow_res = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/ballShadow.png');
-		
+
 		overlays.lost.resource = gapi.hangout.av.effects.createImageResource(baseUrl + 'images/overlay_lost.png');
 		overlays.lost.resource.onLoad.add(function createOverlay(ev) {
 			if (ev.isLoaded) {
@@ -980,28 +1009,31 @@ physics.lastVelocity = physics.ball.GetLinearVelocity();
 
 		// Set to late join state if appropriate
 		sharedState = gapi.hangout.data.getState();
+
 		if (('gameState' in sharedState) && (parseInt(sharedState.gameState, 10) === game.state.PLAYING)) {
 			game.state.set(game.state.LATEJOIN);
 		}
 
 		bean.on(document.getElementsByTagName('button')[0], 'click', function() {
-			if (game.state.get() !== game.state.PLAYING) {
+			if (physics.ball_overlay_res.isLoaded() && physics.ball_shadow_res.isLoaded()) {
+				if (game.state.get() !== game.state.PLAYING) {
 
-				var participants = filterPlayers(gapi.hangout.getEnabledParticipants()), removal = [], delta = {
-					'gameState' : '' + game.state.PLAYING,
-					'playerCount' : '' + participants.length,
-					'lastScore' : '' + (new Date()).getTime()
-				};
+					var participants = filterPlayers(gapi.hangout.getEnabledParticipants()), removal = [], delta = {
+						'gameState' : '' + game.state.PLAYING,
+						'playerCount' : '' + participants.length,
+						'lastScore' : '' + (new Date()).getTime()
+					};
+					console.log(participants);
+					_.each(participants, function(player) {
+						delta['score|' + player.id] = '0';
+					});
+					removal = _.chain(lastSharedState).keys().filter(function(item) {
+						return item.substr(0, 6) === 'score|' && !_.has(delta, item);
+					}).value();
 
-				_.each(participants, function(player) {
-					delta['score|' + player.id] = '0';
-				});
-				removal = _.chain(lastSharedState).keys().filter(function(item) {
-					return item.substr(0, 6) === 'score|' && !_.has(delta, item);
-				}).value();
+					gapi.hangout.data.submitDelta(delta, removal);
 
-				gapi.hangout.data.submitDelta(delta, removal);
-
+				}
 			}
 		});
 		bean.on(document.getElementById('share'), 'click', function(ev) {
@@ -1013,4 +1045,4 @@ physics.lastVelocity = physics.ball.GetLinearVelocity();
 
 	gapi.hangout.onApiReady.add(initialize);
 
-}; 
+};
