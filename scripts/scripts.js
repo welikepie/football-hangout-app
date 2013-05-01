@@ -18,7 +18,7 @@
  *             4 - late join to the game, needs to wait until the end
  */
 var rotate;
-var speedFactor = 1; //<- factor of gravity to negate on impulse.
+var speedFactor = 1.7 * 10; //<- factor of gravity to negate on impulse.
 //in ball create method, friction, restitution and mass make for good fun.
 var bounce;
 //bounce audio.
@@ -455,7 +455,8 @@ window.init = function() {"use strict";
 		}
 
 	}, initialize = function initialize() {
-
+       startHeadTracking();
+            animate();
 		/* GAME LOGIC
 		 * ******************************************
 		 * Bind various events coming from Hangouts API for stuff
@@ -760,7 +761,7 @@ window.init = function() {"use strict";
 		// Establish side walls to prevent the ball from falling off sides
 		body_def.type = Box2D.Dynamics.b2Body.b2_staticBody;
 		fixture_def.friction = 0.5;
-		fixture_def.restitution = 1;
+		fixture_def.restitution = 0.8;
 		fixture_def.shape = new Box2D.Collision.Shapes.b2PolygonShape();
 		fixture_def.shape.SetAsBox(2, physics.area_height * 10);
 
@@ -801,23 +802,33 @@ physics.lastVelocity = physics.ball.GetLinearVelocity();
 						loop : false,
 						volume : 1
 					});
+					
 				}
 
 			}
 		};
 
 		contact.EndContact = function(contact) {
-			var bodyA = contact.GetFixtureA().GetBody(), bodyB = contact.GetFixtureB().GetBody(), ball_velocity, new_velocity, temp;
-				if (((bodyA === physics.head_tracker) && (bodyB === physics.ball)) || ((bodyA === physics.ball) && (bodyB === physics.head_tracker))) {
+			//var bodyA = contact.GetFixtureA().GetBody(), bodyB = contact.GetFixtureB().GetBody(), ball_velocity, new_velocity, temp;
+			var bodyA, bodyB, ball_velocity,new_velocity,temp;
+				//if (((bodyA === physics.head_tracker) && (bodyB === physics.ball)) || ((bodyA === physics.ball) && (bodyB === physics.head_tracker))) {
 				bodyA = physics.head_tracker;
 				bodyB = physics.ball;
 				ball_velocity = physics.ball.GetLinearVelocity();
 				new_velocity = physics.lastVelocity;
 				temp = ball_velocity.Length();
+				clearInterval(physics.rotateTimer);
+				rotate = (0.5 - Math.random()) / 10;
+				//rotateInterval
+				physics.rotateTimer = setInterval(function(){physics.rotator(physics.ball_overlay);},physics.rotateInterval);
+				console.log("-----------------------");
 				console.log(physics.ball.GetLinearVelocity());
-				physics.ball.ApplyImpulse(new Vector(temp,physics.speedup_factor),physics.ball.GetWorldCenter());
+				physics.ball.ApplyImpulse(new Vector(0,physics.speedup_factor),physics.ball.GetWorldCenter());
+				console.log(physics.ball.GetLinearVelocity());
+				console.log("-----------------------");
 				physics.applyForce = true;
-			}
+				
+			//}
 		};
 
 		physics.world.SetContactListener(contact);
