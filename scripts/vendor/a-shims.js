@@ -7,3 +7,15 @@ Array.prototype.indexOf = function(obj, start) {
      }
      return -1;
 }
+
+window.requestAnimationFrame = (function () {
+	return window.requestAnimationFrame ||
+		window.webkitRequestAnimationFrame ||
+		window.mozRequestAnimationFrame ||
+		function shimRequestAnimationFrame(callback) {
+			window.setTimeout(function() {
+				callback((new Date()).getTime());
+			}, 1000 / 60);
+		};
+}());
+console.log('requestAnimationFrame: ', window.requestAnimationFrame);

@@ -8,9 +8,7 @@
 		<link rel="stylesheet" href="styles/bootstrap.css">
 		<link rel="stylesheet" href="styles/flat-ui.css">
 		<link rel="stylesheet" href="styles/styles.css">
-<!--[if lt IE 9]>
 
-<![endif]-->
 		<script type="text/javascript" src="scripts/other/modernizr.js"></script>
 		<script type="text/javascript">
 		var _gaq = _gaq || [];
@@ -20,9 +18,9 @@
 		Modernizr.load({
 			'load': [
 				'https://ssl.google-analytics.com/ga.js',
-				'https://hangoutsapi.talkgadget.google.com/hangouts/api/hangout.js?v=1.3',
-				'scripts/vendor.js?foo=3',
-				'scripts/scripts.js?foo=3'
+				'https://hangoutsapi.talkgadget.google.com/hangouts/api/hangout.js?v=1.4',
+				'scripts/vendor.js',
+				'scripts/scripts.js'
 			],
 			'complete': function complete () { domready(window.init); }
 		});
@@ -35,7 +33,7 @@
 				<div id="textHeader">
 					<h1><%= pkg.app.title %></h1>
 				</div>
-				<img src="https://dev.welikepie.com:444/fffDev/images/logo.png">
+				<img src="images/logo.png">
 			</header>
 			<section id="score">
 				<div id="local">0</div>
