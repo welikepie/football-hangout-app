@@ -26,7 +26,7 @@ window.init = function () {
 	"use strict";
 
 	var //baseUrl = document.getElementsByTagName('base').length ? document.getElementsByTagName('base')[0].href : '',
-		baseUrl = 'http://dev.welikepie.com/fffDev/',
+		baseUrl = 'http://hosted.welikepie.com/new-football-hangout/',
 		game = (function (undefined) {
 
 				// Will hold local participant ID, to mark which of the players
@@ -130,7 +130,6 @@ window.init = function () {
 					'events': {
 						'apiReady': function initializeGame () {
 
-							// Initialise
 							player_id = gapi.hangout.getLocalParticipantId();
 							players[player_id] = {
 								'state': result.state.IDLE,
@@ -161,8 +160,10 @@ window.init = function () {
 							gapi.hangout.onEnabledParticipantsChanged.add(result.events.changeEnabledParticipants);
 							gapi.hangout.data.onStateChanged.add(result.events.changeSharedState);
 
-							// Heartbeat!
-							window.setInterval(submitState, 10000);
+							// Heartbeat messages broadcast current state of the local player over and over
+							// (without modifying the timestamp, so peers that already match the state will not
+							//  double anything) to ensure the state is updated, even with intermittent connection losses.
+							window.setInterval(submitState, 6000);
 						
 						},
 						'changeEnabledParticipants': function changeEnabledParticipants (ev) {
@@ -195,7 +196,7 @@ window.init = function () {
 
 							_.each(ev.addedKeys, function (val) {
 
-								var id, temp, key = val.key;
+								var id, key = val.key;
 								val = val.value;
 
 								if (key.substr(0, 6) === 'player') {
@@ -212,11 +213,10 @@ window.init = function () {
 										if (!_.has(players, id)) {
 											stateChanged = true;
 											scoreChanged = true;
-										} else if (t.timestamp > players[id].timestamp) {
+										} else {
 											if (t.state !== players[id].state) { stateChanged = true; }
 											if (t.score !== players[id].score) { scoreChanged = true; }
 										}
-										console.log('USER [' + id + '] score change to: ', t.score, scoreChanged);
 										players[id] = t;
 
 									}
@@ -238,11 +238,17 @@ window.init = function () {
 								result.state.set(result.state.PLAYING);
 							}
 
-							// Finish the game once all the players have dropped their balls
-							else if ((
-								(result.state.get() === result.state.LOST) ||
-								(result.state.get() === result.state.LATEJOIN)
-							) && result.state.globalStateCheck(true, true, result.state.LOST, result.state.LATEJOIN, result.state.ENDED)) {
+							else if (
+								(result.state.get() === result.state.LOST) &&
+								result.state.globalStateCheck(true, true, result.state.LOST, result.state.LATEJOIN, result.state.ENDED)
+							) {
+								result.state.set(result.state.ENDED);
+							}
+
+							else if (
+								(result.state.get() === result.state.LATEJOIN) &&
+								result.state.globalStateCheck(true, false, result.state.LOST, result.state.LATEJOIN, result.state.ENDED)
+							) {
 								result.state.set(result.state.ENDED);
 							}
 
@@ -262,7 +268,6 @@ window.init = function () {
 			'track_joint_def': null,
 			'movement_factor': 18,
 			'speedup_factor': speedFactor,
-			'velocity_mods': [],
 			'rotateInterval': 20,
 			'rotateTimer': null,
 			'bounced': false,
@@ -523,7 +528,6 @@ window.init = function () {
 			if (game.state.get() === game.state.PLAYING) {
 
 				if (physics.ball) {
-					var oldTime = 0;
 					ball_pos = physics.ball.GetWorldCenter();
 					ball_vel = physics.ball.GetLinearVelocity();
 
@@ -668,26 +672,28 @@ window.init = function () {
 
 			bean.on(game, 'onGameLost', function onGameLost () {
 
-				console.log("gameLost");
 				physics.destroyTracker();
 				physics.destroyBall();
 
-				overlays.lost.overlay.setVisible(true);
-				window.setTimeout(_.bind(overlays.lost.overlay.setVisible, overlays.lost.overlay, false), 1000);
+				try { overlays.lost.overlay.setVisible(true); } catch (e) {}
+				window.setTimeout(function () {
+					try { overlays.lost.overlay.setVisible(false); } catch (e) {}
+				}, 1000);
 
 			});
 
 			bean.on(game, 'onGameEnd', function onGameEnd() {
 
-				console.log('gameEnded');
-				overlays.end.overlay.setVisible(true);
-				window.setTimeout(_.bind(overlays.end.overlay.setVisible, overlays.end.overlay, false), 1000);
+				try { overlays.end.overlay.setVisible(true); } catch (e) {}
+				window.setTimeout(function () {
+					try { overlays.end.overlay.setVisible(false); } catch (e) {}
+				}, 1000);
 
 			});
 
 			var changePoints = function changePoints (counter, amount) {
 
-				var old_amount = parseInt(counter.innerHTML.length ? counter.innerHTML : '0', 10),
+				var old_amount = counter.getElementsByTagName('span')[0].innerHTML,
 					counter_pos = [],
 					anim_func,
 					style_func,
@@ -718,7 +724,7 @@ window.init = function () {
 					anim_func = function counter_anim_func () {
 
 						i -= 1;
-						if (i === -1) { counter.innerHTML = amount; }
+						if (i === -1) { counter.getElementsByTagName('span')[0].innerHTML = amount; }
 						if (i < 0) {
 							_.each(counter_pos, function (el) {
 								try { counter.removeChild(el); } catch (e) {}
@@ -871,8 +877,7 @@ window.init = function () {
 			// Set up contact listener
 			contact.BeginContact = function (contact) {
 				var bodyA = contact.GetFixtureA().GetBody(),
-					bodyB = contact.GetFixtureB().GetBody(),
-					delta, id;
+					bodyB = contact.GetFixtureB().GetBody();
 
 				if (
 					((bodyA === physics.head_tracker) && (bodyB === physics.ball)) ||
@@ -900,13 +905,7 @@ window.init = function () {
 				}
 			};
 
-			contact.EndContact = function (contact) {
-
-				var bodyA = physics.head_tracker,
-					bodyB = physics.ball,
-					ball_velocity = physics.ball.GetLinearVelocity(),
-					new_velocity = physics.lastVelocity,
-					temp = ball_velocity.Length();
+			contact.EndContact = function () {
 
 				window.clearInterval(physics.rotateTimer);
 				rotate = (0.5 - Math.random()) / 10;

@@ -19,8 +19,8 @@
 			'load': [
 				'https://ssl.google-analytics.com/ga.js',
 				'https://hangoutsapi.talkgadget.google.com/hangouts/api/hangout.js?v=1.4',
-				'scripts/vendor.js',
-				'scripts/scripts.js'
+				'scripts/vendor.js?_=1',
+				'scripts/scripts.js?_=1'
 			],
 			'complete': function complete () { domready(window.init); }
 		});
@@ -36,8 +36,8 @@
 				<img src="images/logo.png">
 			</header>
 			<section id="score">
-				<div id="local">0</div>
-				<div id="team">0</div>
+				<div id="local"><span>0</span></div>
+				<div id="team"><span>0</span></div>
 			</section>
 
 			<section id="controls">
@@ -45,7 +45,7 @@
 				<p class="introduction">Pour jouer le jeu, appuyez sur le bouton ci-dessous, puis essayez de faire rebondir la balle sur la tête.</p>
 				<p class="gameover">Félicitations! Pour jouer, appuyez sur le bouton ci-dessous.</p>
 				<p class="late">Vous avez rejoint un jeu en cours. Vous pourrez rejoindre la partie lorsque cette manche est terminée.</p>
-				<a href="https://plus.google.com/share?url=<%= encodeURIComponent('http://hosted.welikepie.com/football-hangout/') %>" target="_blank" id="share">Partager l'application</a>
+				<a href="https://plus.google.com/share?url=<%= encodeURIComponent(grunt.config.get('pkg.app.appUrl')) %>" target="_blank" id="share">Partager l'application</a>
 				<a href="https://plus.google.com/communities/101011174280932158067" target="_blank" id="community">Rejoignez les Bleus</a>
 			</section>
 

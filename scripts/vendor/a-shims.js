@@ -18,4 +18,3 @@ window.requestAnimationFrame = (function () {
 			}, 1000 / 60);
 		};
 }());
-console.log('requestAnimationFrame: ', window.requestAnimationFrame);

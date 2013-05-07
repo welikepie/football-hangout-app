@@ -18,13 +18,11 @@
 var Box2D = {};
 
 (function (a2j, undefined) {
-console.log("prototype_defineProperty:"+Object.prototype.defineProperty+":Object defGetter"+ Object.prototype.__defineGetter__+":Object defSetter"+Object.prototype.__defineSetter__);
 
    if(!(Object.prototype.defineProperty instanceof Function)
       && Object.prototype.__defineGetter__ instanceof Function
       && Object.prototype.__defineSetter__ instanceof Function)
    {
-   	console.log("RE-SETTING");
       Object.defineProperty = function(obj, p, cfg) {
          if(cfg.get instanceof Function)
             obj.__defineGetter__(p, cfg.get);
